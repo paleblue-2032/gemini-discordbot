@@ -114,7 +114,11 @@ fi
 echo "== 6. gemini-discordbot を起動 =="
 systemctl enable "$UNIT"
 systemctl restart "$UNIT"
-systemctl is-active "$UNIT"
+if ! systemctl is-active --quiet "$UNIT"; then
+  systemctl status "$UNIT" --no-pager -n 30 || true
+  journalctl -u "$UNIT" -n 50 --no-pager || true
+  exit 1
+fi
 systemctl status "$UNIT" --no-pager -n 5 || true
 
 echo
