@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# サーバー上のサービスを操作する唯一の入口。
+# root 所有・755 で置き、sudoers からはこのスクリプトだけを NOPASSWD にする。
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+usage: botctl <command> <service>
+
+  service: gemini | commandcode | kosen | fileshare
+  command: deploy | restart | start | stop | disable | status | logs | follow | enable | fix-env | harden
+EOF
+  exit 2
+}
+
+action="${1:-}"
+name="${2:-}"
+
+case "$name" in
+  gemini)
+    unit="gemini-discordbot"
+    dir="/srv/gemini-discordbot"
+    ;;
+  commandcode)
+    unit="commandcode-discordbot"
+    dir="/srv/commandcode-discordbot"
+    ;;
+  kosen)
+    unit="toyamakosen-bus-bot"
+    dir="/srv/toyamakosen-bus-bot"
+    ;;
+  fileshare)
+    unit="fileshare"
+    dir="/srv/fileshare"
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+if [ ! -d "$dir" ]; then
+  echo "not found: $dir" >&2
+  exit 1
+fi
+
+# リポジトリの所有者で git / nix を実行する（root 所有ファイルを作らない）
+owner="$(stat -c %U "$dir")"
+owner_home="$(getent passwd "$owner" | cut -d: -f6)"
+as_owner() {
+  runuser -u "$owner" -- env HOME="$owner_home" PATH=/nix/var/nix/profiles/default/bin:/usr/local/bin:/usr/bin:/bin "$@"
+}
+
+case "$action" in
+  deploy)
+    # botctl is installed only by the root-run install-server.sh. Do not
+    # self-install from a user-writable checkout here: that would turn any
+    # write access to /srv/<service> into a passwordless root escalation.
+    as_owner git -C "$dir" pull --ff-only
+    as_owner nix build "$dir#default" -o "$dir/result" --print-build-logs
+    systemctl restart "$unit"
+    systemctl is-active "$unit"
+    ;;
+  restart)
+    systemctl restart "$unit"
+    systemctl is-active "$unit"
+    ;;
+  start)
+    systemctl start "$unit"
+    systemctl is-active "$unit"
+    ;;
+  stop)
+    systemctl stop "$unit"
+    systemctl is-active "$unit" || true
+    ;;
+  disable)
+    systemctl disable --now "$unit"
+    systemctl is-enabled "$unit" 2>/dev/null || true
+    ;;
+  status)
+    systemctl status "$unit" --no-pager
+    ;;
+  logs)
+    journalctl -u "$unit" -n 100 --no-pager
+    ;;
+  follow)
+    journalctl -u "$unit" -n 50 -f
+    ;;
+  enable)
+    systemctl enable "$unit"
+    systemctl restart "$unit"
+    systemctl is-active "$unit"
+    ;;
+  fix-env)
+    if [ ! -f "$dir/.env" ]; then
+      echo "not found: $dir/.env" >&2
+      exit 1
+    fi
+    chown root:root "$dir/.env"
+    chmod 600 "$dir/.env"
+    stat -c '%U:%G %a %n' "$dir/.env"
+    ;;
+
+  harden)
+    if [ "$name" != "fileshare" ]; then
+      echo "harden is only available for fileshare" >&2
+      exit 2
+    fi
+    if ! command -v tailscale >/dev/null 2>&1; then
+      echo "tailscale is required for harden" >&2
+      exit 1
+    fi
+    if ! tailscale serve status 2>/dev/null | grep -Fq 'proxy http://127.0.0.1:8087'; then
+      echo "refusing: tailscale serve is not configured for http://127.0.0.1:8087" >&2
+      echo "run deploy/enable-tailscale-serve.sh first" >&2
+      exit 1
+    fi
+    envfile="$dir/.env"
+    if [ ! -f "$envfile" ]; then
+      echo "not found: $envfile" >&2
+      exit 1
+    fi
+    backup="/root/fileshare-env.bak.$(date +%Y%m%d%H%M%S)"
+    cp -p "$envfile" "$backup"
+    echo "backed up $envfile to $backup"
+    if grep -q '^FILESHARE_ADDR=' "$envfile"; then
+      sed -i 's|^FILESHARE_ADDR=.*|FILESHARE_ADDR=127.0.0.1:8087|' "$envfile"
+    else
+      printf 'FILESHARE_ADDR=127.0.0.1:8087\n' >>"$envfile"
+    fi
+    chown root:root "$envfile"
+    chmod 600 "$envfile"
+
+    if command -v ufw >/dev/null 2>&1; then
+      iface=$(ip -4 route show default | awk '{print $5; exit}')
+      if [ -n "${iface:-}" ]; then
+        cidr=$(ip -4 route show dev "$iface" scope link | awk '$1 ~ /\// {print $1; exit}')
+        if [ -n "${cidr:-}" ]; then
+          ufw --force delete allow from "$cidr" to any port 8087 proto tcp >/dev/null 2>&1 || true
+          echo "removed LAN rule for $cidr if it existed"
+        fi
+      fi
+      ufw --force delete allow in on tailscale0 to any port 8087 proto tcp >/dev/null 2>&1 || true
+      echo "removed direct tailnet 8087 rule if it existed"
+    fi
+
+    systemctl restart fileshare
+    systemctl is-active fileshare
+    echo "fileshare now listens on 127.0.0.1:8087; use the Tailscale HTTPS URL"
+    ;;
+  *)
+    usage
+    ;;
+esac

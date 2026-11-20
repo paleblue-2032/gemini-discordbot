@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly SMART health snapshot for the gemini-discordbot
+
+[Timer]
+OnCalendar=hourly
+AccuracySec=1min
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

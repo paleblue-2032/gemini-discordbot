@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# SMART の健全性を 1 行 JSON で書き出します。root の systemd timer から実行します。
+# 出力: /var/lib/gemini-discordbot/smart.json (root:root 0644)
+set -uo pipefail
+
+DEVICE="${DISK_DEVICE:-/dev/sdb}"
+OUT_DIR="/var/lib/gemini-discordbot"
+OUT_FILE="$OUT_DIR/smart.json"
+
+mkdir -p "$OUT_DIR"
+
+now=$(date -u +%FT%TZ)
+write() {
+  local verdict="$1" reallocated="$2" pending="$3" temperature="$4"
+  printf '{"device":"%s","verdict":"%s","reallocated":%s,"pending":%s,"temperature":%s,"at":"%s"}\n' \
+    "$DEVICE" "$verdict" "$reallocated" "$pending" "$temperature" "$now" > "$OUT_FILE.tmp"
+  chmod 644 "$OUT_FILE.tmp"
+  mv "$OUT_FILE.tmp" "$OUT_FILE"
+}
+
+if ! command -v smartctl >/dev/null 2>&1; then
+  write unavailable null null null
+  exit 0
+fi
+
+output=$(smartctl -H -A "$DEVICE" 2>&1) || true
+
+if printf '%s' "$output" | grep -qiE "Overall-Health-Self-Assessment.*FAILED|SMART overall-health self-assessment test result: FAILED"; then
+  health=FAILED
+elif printf '%s' "$output" | grep -qiE "SMART overall-health self-assessment test result: PASSED"; then
+  health=PASSED
+else
+  write unavailable null null null
+  exit 0
+fi
+
+read_attr() {
+  printf '%s\n' "$output" | awk -v name="$1" '$0 ~ name {print $10; exit}'
+}
+
+reallocated=$(read_attr "Reallocated_Sector_Ct")
+pending=$(read_attr "Current_Pending_Sector")
+temperature=$(read_attr "Temperature_Celsius")
+
+is_number() { [[ "${1:-}" =~ ^[0-9]+$ ]]; }
+is_number "$reallocated" || reallocated=null
+is_number "$pending" || pending=null
+is_number "$temperature" || temperature=null
+
+verdict=ok
+if [ "$health" = FAILED ]; then
+  verdict=critical
+elif [ "$reallocated" != null ] && [ "$reallocated" -gt 0 ]; then
+  verdict=critical
+elif [ "$pending" != null ] && [ "$pending" -gt 0 ]; then
+  verdict=critical
+elif [ "$temperature" != null ] && [ "$temperature" -gt 50 ]; then
+  verdict=warning
+fi
+
+write "$verdict" "$reallocated" "$pending" "$temperature"

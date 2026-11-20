@@ -1,0 +1,30 @@
+[Unit]
+Description=Gemini Discord bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cmdbot
+Group=cmdbot
+WorkingDirectory=/srv/gemini-discordbot
+EnvironmentFile=/srv/gemini-discordbot/.env
+Environment=HOME=/home/cmdbot
+Environment=PATH=/home/cmdbot/.npm-global/bin:/home/cmdbot/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/srv/gemini-discordbot/result/bin/gemini-discordbot
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+ReadWritePaths=/srv/work /srv/gemini-discordbot /home/cmdbot/.commandcode /home/cmdbot/.cache
+UMask=0002
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Write SMART health snapshot for the gemini-discordbot
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/default/gemini-disk-health
+ExecStart=/usr/local/sbin/gemini-disk-health
+Nice=19
+IOSchedulingClass=idle
