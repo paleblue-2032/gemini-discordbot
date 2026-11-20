@@ -19,7 +19,7 @@
           version = "0.1.0";
           src = ./.;
           nodejs = pkgs.nodejs_22;
-          npmDepsHash = "sha256-QVEUV0s/0M9g+MLjGXTezQlpmkqRtdVFc0gScl/yefs=";
+          npmDepsHash = "sha256-pJA5SuqfjE9oalVLFp3NXvJ2Y/KHjd/PXKeYiY3++0Q=";
           npmBuildScript = "build";
           nativeBuildInputs = [ pkgs.makeWrapper ];
           installPhase = ''
