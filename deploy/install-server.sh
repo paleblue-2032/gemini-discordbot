@@ -65,7 +65,7 @@ if [ ! -f "$ENV_FILE" ]; then
   {
     echo "AI_BACKEND=gemini"
     echo "GEMINI_API_KEY=${GEMINI_API_KEY:-}"
-    echo "GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.1-flash-lite}"
+    echo "GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.5-flash-lite}"
     echo "GEMINI_BASE_URL=${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}"
     echo "GEMINI_GOOGLE_SEARCH=false"
     echo "GEMINI_MAX_HISTORY_MESSAGES=40"

@@ -151,7 +151,7 @@ test('AI_BACKEND=gemini requires a key and uses Gemini defaults', async () => {
     });
 
     assert.equal(config.backend, 'gemini');
-    assert.equal(config.defaultModel, 'gemini-3.1-flash-lite');
+    assert.equal(config.defaultModel, 'gemini-3.5-flash-lite');
     assert.equal(config.defaultEffort, null);
     assert.equal(config.gemini.apiKey, 'test-key');
     assert.equal(config.gemini.baseUrl, 'https://generativelanguage.googleapis.com/v1beta');

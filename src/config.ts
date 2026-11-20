@@ -94,7 +94,7 @@ function parseBoolean(value: string | undefined, fallback: boolean, name: string
   throw new Error(`${name} は true / false で指定してください: ${value}`);
 }
 
-const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_GEMINI_SYSTEM_PROMPT = [
   'あなたは Discord 上で動くアシスタントです。',

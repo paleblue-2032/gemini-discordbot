@@ -90,7 +90,7 @@ Gemini がサーバー上のファイルを自動で読むことはない。添�
 
 ### モデル
 
-既定は `GEMINI_MODEL`（`gemini-3.1-flash-lite`）。`/model` の候補は Gemini の
+既定は `GEMINI_MODEL`（`gemini-3.5-flash-lite`）。`/model` の候補は Gemini の
 `GET /v1beta/models` から取得し、`generateContent` に対応するモデルだけを表示する。
 TTS・画像生成・embedding・live・computer-use などは除外している。
 
@@ -144,7 +144,7 @@ Gemini 直結では使わない。
 | `DISCORD_TOKEN` | Bot トークン（必須） |
 | `AI_BACKEND` | `gemini` / `cmd`（既定 `cmd`、サーバーでは `gemini`） |
 | `GEMINI_API_KEY` | Gemini API キー（`AI_BACKEND=gemini` のとき必須） |
-| `GEMINI_MODEL` | 既定モデル（既定 `gemini-3.1-flash-lite`） |
+| `GEMINI_MODEL` | 既定モデル（既定 `gemini-3.5-flash-lite`） |
 | `GEMINI_BASE_URL` | API のベース URL（既定 `https://generativelanguage.googleapis.com/v1beta`） |
 | `GEMINI_HISTORY_FILE` | 会話履歴の保存先（既定 `./gemini-history.json`） |
 | `GEMINI_MAX_HISTORY_MESSAGES` | 1 チャンネルあたりの履歴上限（既定 40） |
